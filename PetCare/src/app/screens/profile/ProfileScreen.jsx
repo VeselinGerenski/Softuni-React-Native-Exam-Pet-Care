@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -12,6 +13,7 @@ import { mockUserProfile } from "../../data/mockData";
 
 export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const tabBarHeight = useBottomTabBarHeight();
 
   const displayName = useMemo(() => {
     if (!user) return "User";
@@ -38,75 +40,87 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView >
     <Screen style={styles.screen}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Ionicons name="person" size={28} color={colors.primaryForeground} />
-        </View>
-        <Text style={styles.title}>Profile</Text>
-        <Text style={styles.subtitle}>Your account information</Text>
-      </View>
-
-      {/* Profile Card */}
-      <AppCard style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-        <Text style={styles.name}>{displayName}</Text>
-
-        <View style={styles.infoBox}>
-          <View style={styles.infoHead}>
-            <Ionicons name="mail" size={18} color={colors.primary} />
-            <Text style={styles.infoLabel}>Email Address</Text>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: tabBarHeight + spacing.lg },
+        ]}
+        scrollIndicatorInsets={{ bottom: tabBarHeight }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="person" size={28} color={colors.primaryForeground} />
           </View>
-          <Text style={styles.infoValue}>{email}</Text>
+          <Text style={styles.title}>Profile</Text>
+          <Text style={styles.subtitle}>Your account information</Text>
         </View>
 
-        <View style={styles.infoBox}>
-          <View style={styles.infoHead}>
-            <Ionicons name="paw" size={18} color={colors.primary} />
-            <Text style={styles.infoLabel}>Member Since</Text>
+        {/* Profile Card */}
+        <AppCard style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.infoValue}>{mockUserProfile.memberSinceLabel}</Text>
-        </View>
-      </AppCard>
+          <Text style={styles.name}>{displayName}</Text>
 
-      {/* About */}
-      <AppCard style={styles.aboutCard}>
-        <Text style={styles.aboutTitle}>About PetCare</Text>
-        <Text style={styles.aboutText}>
-          PetCare helps you manage your pets' health and wellness by keeping track of:
-        </Text>
-        <View style={styles.bullets}>
-          {[
-            "Pet profiles and information",
-            "Vaccination schedules",
-            "Vet appointments",
-            "Medication reminders",
-            "Grooming sessions",
-          ].map((t) => (
-            <Text key={t} style={styles.bullet}>• {t}</Text>
-          ))}
-        </View>
-        <Text style={styles.version}>Version 1.0.0 • Built with ❤️ for pet lovers</Text>
-      </AppCard>
+          <View style={styles.infoBox}>
+            <View style={styles.infoHead}>
+              <Ionicons name="mail" size={18} color={colors.primary} />
+              <Text style={styles.infoLabel}>Email Address</Text>
+            </View>
+            <Text style={styles.infoValue}>{email}</Text>
+          </View>
 
-      <AppButton
-        title="Logout"
-        variant="destructive"
-        onPress={handleLogout}
-        left={<Ionicons name="log-out" size={20} color={colors.primaryForeground} />}
-        style={styles.logoutBtn}
-      />
+          <View style={styles.infoBox}>
+            <View style={styles.infoHead}>
+              <Ionicons name="paw" size={18} color={colors.primary} />
+              <Text style={styles.infoLabel}>Member Since</Text>
+            </View>
+            <Text style={styles.infoValue}>{mockUserProfile.memberSinceLabel}</Text>
+          </View>
+        </AppCard>
+
+        {/* About */}
+        <AppCard style={styles.aboutCard}>
+          <Text style={styles.aboutTitle}>About PetCare</Text>
+          <Text style={styles.aboutText}>
+            PetCare helps you manage your pets' health and wellness by keeping track of:
+          </Text>
+          <View style={styles.bullets}>
+            {[
+              "Pet profiles and information",
+              "Vaccination schedules",
+              "Vet appointments",
+              "Medication reminders",
+              "Grooming sessions",
+            ].map((t) => (
+              <Text key={t} style={styles.bullet}>
+                • {t}
+              </Text>
+            ))}
+          </View>
+          <Text style={styles.version}>Version 1.0.0 • Built with ❤️ for pet lovers</Text>
+        </AppCard>
+
+        <AppButton
+          title="Logout"
+          variant="destructive"
+          onPress={handleLogout}
+          left={<Ionicons name="log-out" size={20} color={colors.primaryForeground} />}
+          style={styles.logoutBtn}
+        />
+      </ScrollView>
     </Screen>
-    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingBottom: 110 },
+  screen: {},
+  scrollContent: {
+    // bottom padding is added dynamically using tabBarHeight
+  },
   header: { alignItems: "center", marginBottom: spacing.lg },
   headerIcon: {
     width: 52,

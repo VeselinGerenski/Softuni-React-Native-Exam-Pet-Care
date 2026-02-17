@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -23,25 +22,6 @@ export function listenPets(uid, callback) {
   return onSnapshot(q, (snap) => {
     const pets = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     callback(pets);
-  });
-}
-
-export async function ensureCharlieSeed(uid) {
-  const petRef = doc(db, "users", uid, "pets", "charlie");
-  const snap = await getDoc(petRef);
-  if (snap.exists()) return;
-
-  await setDoc(petRef, {
-    name: "Charlie",
-    species: "Dog",
-    breed: "Beagle",
-    birthDate: "2021-11-08",
-    neutered: false,
-    notes: "Very energetic, needs lots of exercise.",
-    // store ONLY a storage path (optional). We'll leave it empty for the seed.
-    photoPath: "",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   });
 }
 

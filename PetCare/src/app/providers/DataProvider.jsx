@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { useAuth } from "./AuthProvider";
 import {
   createPet,
-  ensureCharlieSeed,
   listenPets,
   patchPet,
   removeAppointmentsForPet,
@@ -64,13 +63,13 @@ export function DataProvider({ children }) {
 
     setIsBootingData(true);
 
-    // Ensure we have at least one starter pet in DB (Charlie)
-    ensureCharlieSeed(user.uid).catch(() => {});
-
     unsubPets = listenPets(user.uid, (petDocs) => {
+      // Hide the legacy seeded pet document (id: "charlie") so it never appears in the UI.
+      const visiblePetDocs = petDocs.filter((p) => p.id !== "charlie");
+
       // Merge cached photoUrl if we already have it
       setPets(
-        petDocs.map((p) => {
+        visiblePetDocs.map((p) => {
           const cached = p.photoPath ? photoUrlCacheRef.current.get(p.photoPath) : "";
           return {
             ...p,
@@ -78,7 +77,7 @@ export function DataProvider({ children }) {
           };
         })
       );
-      resolvePetPhotoUrls(petDocs);
+      resolvePetPhotoUrls(visiblePetDocs);
     });
 
     unsubApts = listenAppointments(user.uid, (aptDocs) => {

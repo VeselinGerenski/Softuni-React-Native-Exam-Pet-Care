@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -30,6 +31,8 @@ const TYPE_OPTIONS = [
 export default function ScheduleListScreen({ route, navigation }) {
   const { pets, appointments } = useData();
   const preFilterPetId = route?.params?.preFilterPetId;
+
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [filterPet, setFilterPet] = useState(preFilterPetId || "all");
   const [filterType, setFilterType] = useState("all");
@@ -68,7 +71,11 @@ export default function ScheduleListScreen({ route, navigation }) {
       <Pressable
         key={apt.id}
         onPress={() => navigation.navigate("AppointmentForm", { appointmentId: apt.id })}
-        style={({ pressed }) => [styles.aptCard, dimmed ? { opacity: 0.6 } : null, pressed ? { opacity: 0.85 } : null]}
+        style={({ pressed }) => [
+          styles.aptCard,
+          dimmed ? { opacity: 0.6 } : null,
+          pressed ? { opacity: 0.85 } : null,
+        ]}
       >
         <View style={styles.aptRow}>
           <View style={styles.petThumb}>
@@ -91,7 +98,11 @@ export default function ScheduleListScreen({ route, navigation }) {
 
             <Text style={styles.dateText}>{formatDate(apt.dateTime)}</Text>
             <Text style={styles.timeText}>{formatTime(apt.dateTime)}</Text>
-            {apt.notes ? <Text style={styles.notesText} numberOfLines={2}>{apt.notes}</Text> : null}
+            {apt.notes ? (
+              <Text style={styles.notesText} numberOfLines={2}>
+                {apt.notes}
+              </Text>
+            ) : null}
           </View>
         </View>
       </Pressable>
@@ -101,7 +112,14 @@ export default function ScheduleListScreen({ route, navigation }) {
   return (
     <Screen style={styles.screen}>
       {/* Use ScrollView to avoid nested/inline scrollbars */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: tabBarHeight + spacing.lg },
+        ]}
+        scrollIndicatorInsets={{ bottom: tabBarHeight }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
@@ -128,8 +146,18 @@ export default function ScheduleListScreen({ route, navigation }) {
           </View>
 
           <View style={styles.filtersGrid}>
-            <SelectField label="Filter by Pet" value={filterPet} onValueChange={setFilterPet} options={petOptions} />
-            <SelectField label="Filter by Type" value={filterType} onValueChange={setFilterType} options={TYPE_OPTIONS} />
+            <SelectField
+              label="Filter by Pet"
+              value={filterPet}
+              onValueChange={setFilterPet}
+              options={petOptions}
+            />
+            <SelectField
+              label="Filter by Type"
+              value={filterType}
+              onValueChange={setFilterType}
+              options={TYPE_OPTIONS}
+            />
           </View>
         </AppCard>
 
@@ -146,9 +174,7 @@ export default function ScheduleListScreen({ route, navigation }) {
               <Text style={styles.sectionEmptyText}>No upcoming appointments</Text>
             </AppCard>
           ) : (
-            <View style={{ gap: 12 }}>
-              {upcoming.map((a) => renderCard(a, false))}
-            </View>
+            <View style={{ gap: 12 }}>{upcoming.map((a) => renderCard(a, false))}</View>
           )}
         </View>
 
@@ -157,11 +183,11 @@ export default function ScheduleListScreen({ route, navigation }) {
           <View>
             <View style={styles.sectionTitleRow}>
               <View style={[styles.sectionBar, { backgroundColor: colors.mutedForeground }]} />
-              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Past Appointments</Text>
+              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+                Past Appointments
+              </Text>
             </View>
-            <View style={{ gap: 12 }}>
-              {past.map((a) => renderCard(a, true))}
-            </View>
+            <View style={{ gap: 12 }}>{past.map((a) => renderCard(a, true))}</View>
           </View>
         ) : null}
       </ScrollView>
@@ -170,8 +196,10 @@ export default function ScheduleListScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingBottom: 110 },
-  scrollContent: { paddingBottom: 120 },
+  screen: {},
+  scrollContent: {
+    // bottom padding is added dynamically using tabBarHeight
+  },
   header: { alignItems: "center", marginBottom: spacing.lg },
   headerIcon: {
     width: 52,
@@ -183,7 +211,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: { ...typography.h1, color: colors.foreground },
-  subtitle: { ...typography.body, color: colors.mutedForeground, marginTop: 6, textAlign: "center" },
+  subtitle: {
+    ...typography.body,
+    color: colors.mutedForeground,
+    marginTop: 6,
+    textAlign: "center",
+  },
   actions: { marginBottom: spacing.lg },
   filtersCard: { padding: spacing.md, marginBottom: spacing.lg },
   filtersHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.sm },
@@ -219,7 +252,13 @@ const styles = StyleSheet.create({
   petThumbImg: { width: "100%", height: "100%", resizeMode: "cover" },
   petThumbFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   petThumbEmoji: { fontSize: 26 },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 6 },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 6,
+  },
   petName: { ...typography.bodyMedium, color: colors.foreground },
   dateText: { ...typography.smallMedium, color: colors.foreground },
   timeText: { ...typography.small, color: colors.mutedForeground, marginTop: 2 },

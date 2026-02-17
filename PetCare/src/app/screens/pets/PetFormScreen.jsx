@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -36,7 +37,12 @@ export default function PetFormScreen({ route, navigation }) {
   const isEditMode = !!petId;
   const { pets, addPet, updatePet } = useData();
 
-  const existing = useMemo(() => pets.find((p) => p.id === String(petId)), [pets, petId]);
+  const tabBarHeight = useBottomTabBarHeight();
+
+  const existing = useMemo(
+    () => pets.find((p) => p.id === String(petId)),
+    [pets, petId]
+  );
 
   // photoUrl is resolved at runtime (from Storage) and comes from the pet doc.
   // localPhotoUri is used for previewing a freshly picked image before upload.
@@ -72,8 +78,10 @@ export default function PetFormScreen({ route, navigation }) {
   }, [existing]);
 
   const validate = () => {
-    if (!name.trim() || name.trim().length < 2) return "Please enter a name (min 2 characters).";
-    if (!birthDateObj || Number.isNaN(birthDateObj.getTime())) return "Please pick a valid birth date.";
+    if (!name.trim() || name.trim().length < 2)
+      return "Please enter a name (min 2 characters).";
+    if (!birthDateObj || Number.isNaN(birthDateObj.getTime()))
+      return "Please pick a valid birth date.";
     return null;
   };
 
@@ -102,10 +110,13 @@ export default function PetFormScreen({ route, navigation }) {
     try {
       if (isEditMode) {
         await updatePet(String(petId), payload, localPhotoUri);
-        navigation.navigate("PetDetails", { petId: String(petId) });
+        // Return to the existing details screen in the stack (avoid duplicating routes).
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.replace("PetDetails", { petId: String(petId) });
       } else {
         const newId = await addPet(payload, localPhotoUri);
-        navigation.navigate("PetDetails", { petId: newId });
+        // Replace the form with details so back from details returns to the list.
+        navigation.replace("PetDetails", { petId: newId });
       }
     } catch (e) {
       Alert.alert(
@@ -123,7 +134,10 @@ export default function PetFormScreen({ route, navigation }) {
       // Ask permission (will no-op / resolve immediately if already granted).
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission needed", "Please allow photo library access to select a pet photo.");
+        Alert.alert(
+          "Permission needed",
+          "Please allow photo library access to select a pet photo."
+        );
         return;
       }
 
@@ -149,7 +163,7 @@ export default function PetFormScreen({ route, navigation }) {
   };
 
   const goBack = () => {
-    if (isEditMode) navigation.navigate("PetDetails", { petId: String(petId) });
+    if (navigation.canGoBack()) navigation.goBack();
     else navigation.navigate("PetsList");
   };
 
@@ -164,8 +178,15 @@ export default function PetFormScreen({ route, navigation }) {
         left={<Ionicons name="arrow-back" size={18} color={colors.foreground} />}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: tabBarHeight + spacing.lg }}
+          scrollIndicatorInsets={{ bottom: tabBarHeight }}
+          showsVerticalScrollIndicator={false}
+        >
           <AppCard style={styles.card}>
             <Text style={styles.title}>{isEditMode ? "Edit Pet" : "Add New Pet"}</Text>
 
@@ -203,7 +224,12 @@ export default function PetFormScreen({ route, navigation }) {
 
             {/* Fields */}
             <View style={{ gap: 16, marginTop: spacing.lg }}>
-              <AppField label="Pet Name *" placeholder="e.g., Max, Luna" value={name} onChangeText={setName} />
+              <AppField
+                label="Pet Name *"
+                placeholder="e.g., Max, Luna"
+                value={name}
+                onChangeText={setName}
+              />
 
               <SelectField
                 label="Species *"
@@ -212,7 +238,12 @@ export default function PetFormScreen({ route, navigation }) {
                 options={SPECIES_OPTIONS}
               />
 
-              <AppField label="Breed" placeholder="e.g., Golden Retriever" value={breed} onChangeText={setBreed} />
+              <AppField
+                label="Breed"
+                placeholder="e.g., Golden Retriever"
+                value={breed}
+                onChangeText={setBreed}
+              />
 
               <View style={styles.dateCard}>
                 <Text style={styles.dateLabel}>Birth Date *</Text>
@@ -291,7 +322,7 @@ export default function PetFormScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingBottom: 110 },
+  screen: {},
   backBtn: {
     alignSelf: "flex-start",
     paddingHorizontal: 0,

@@ -2,14 +2,19 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Platform, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PetsStack from "./PetsStack";
 import ScheduleStack from "./ScheduleStack";
 import ProfileStack from "./ProfileStack";
-import { colors, radius } from "../theme/theme";
+import { colors } from "../theme/theme";
 
 const Tab = createBottomTabNavigator();
 
 export default function AppTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, Platform.OS === "ios" ? 18 : 10);
+  const barHeight = 56 + bottomPad;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -17,7 +22,15 @@ export default function AppTabs() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarStyle: styles.tabBar,
+        // Overlay the content like the design (content should hide *under* the bar),
+        // while still respecting safe-area so it never clashes with system buttons.
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            paddingBottom: bottomPad,
+            height: barHeight,
+          },
+        ],
         tabBarLabelStyle: styles.label,
         tabBarIcon: ({ color, size, focused }) => {
           const icon =
@@ -46,18 +59,19 @@ export default function AppTabs() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.card,
-    borderTopColor: colors.border,
+    // Use an opaque separator so scroll content never shows through as a "thin line"
+    borderTopColor: colors.muted,
     borderTopWidth: 1,
-    height: Platform.select({ ios: 88, android: 64 }),
+    borderBottomColor: colors.muted,
+    borderBottomWidth: 1,
     paddingTop: 8,
-    paddingBottom: Platform.select({ ios: 28, android: 10 }),
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
     position: "absolute",
-    // Keep the tabs anchored to the bottom edge (no floating/lifted nav)
     left: 0,
     right: 0,
     bottom: 0,
+    // No rounding on the bar (top border only)
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     overflow: "hidden",
   },
   label: {

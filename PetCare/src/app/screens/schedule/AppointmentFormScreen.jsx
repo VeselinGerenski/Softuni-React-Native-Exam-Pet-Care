@@ -11,6 +11,7 @@ import {
   Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 import Screen from "../../components/layout/Screen";
@@ -34,6 +35,8 @@ export default function AppointmentFormScreen({ route, navigation }) {
   const { appointmentId, petId: prefillPetId } = route.params || {};
   const isEditMode = !!appointmentId;
   const { pets, appointments, addAppointment, updateAppointment, deleteAppointment } = useData();
+
+  const tabBarHeight = useBottomTabBarHeight();
 
   const existing = useMemo(
     () => (isEditMode ? appointments.find((a) => a.id === String(appointmentId)) : null),
@@ -97,7 +100,8 @@ export default function AppointmentFormScreen({ route, navigation }) {
     }
 
     setSubmitting(false);
-    navigation.navigate("ScheduleList");
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate("ScheduleList");
   };
 
   const confirmDelete = () => {
@@ -108,7 +112,10 @@ export default function AppointmentFormScreen({ route, navigation }) {
         style: "destructive",
         onPress: () => {
           Promise.resolve(deleteAppointment(String(appointmentId)))
-            .then(() => navigation.navigate("ScheduleList"))
+            .then(() => {
+              if (navigation.canGoBack()) navigation.goBack();
+              else navigation.navigate("ScheduleList");
+            })
             .catch((e) => Alert.alert("Error", e?.message || "Could not delete appointment"));
         },
       },
@@ -137,14 +144,21 @@ export default function AppointmentFormScreen({ route, navigation }) {
       <AppButton
         title="Back to Schedule"
         variant="ghost"
-        onPress={() => navigation.navigate("ScheduleList")}
+        onPress={() => {
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.navigate("ScheduleList");
+        }}
         style={styles.backBtn}
         textStyle={{ color: colors.foreground }}
         left={<Ionicons name="arrow-back" size={18} color={colors.foreground} />}
       />
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: tabBarHeight + spacing.lg }}
+          scrollIndicatorInsets={{ bottom: tabBarHeight }}
+          showsVerticalScrollIndicator={false}
+        >
           <AppCard style={styles.card}>
             <Text style={styles.title}>{isEditMode ? "Edit Appointment" : "New Appointment"}</Text>
 
@@ -179,7 +193,12 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 </View>
               ) : null}
 
-              <SelectField label="Appointment Type *" value={type} onValueChange={setType} options={TYPE_OPTIONS} />
+              <SelectField
+                label="Appointment Type *"
+                value={type}
+                onValueChange={setType}
+                options={TYPE_OPTIONS}
+              />
 
               <View style={styles.dateCard}>
                 <Text style={styles.dateLabel}>Date & Time *</Text>
@@ -207,11 +226,21 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 </View>
 
                 {showDatePicker ? (
-                  <DateTimePicker value={dateObj} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPickDate} />
+                  <DateTimePicker
+                    value={dateObj}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onPickDate}
+                  />
                 ) : null}
 
                 {showTimePicker ? (
-                  <DateTimePicker value={dateObj} mode="time" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPickTime} />
+                  <DateTimePicker
+                    value={dateObj}
+                    mode="time"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onPickTime}
+                  />
                 ) : null}
               </View>
 
@@ -256,7 +285,10 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 <AppButton
                   title="Cancel"
                   variant="outline"
-                  onPress={() => navigation.navigate("ScheduleList")}
+                  onPress={() => {
+                    if (navigation.canGoBack()) navigation.goBack();
+                    else navigation.navigate("ScheduleList");
+                  }}
                   style={{ flex: 1 }}
                   left={<Ionicons name="close" size={18} color={colors.primary} />}
                   disabled={submitting}
@@ -293,7 +325,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { paddingBottom: 110 },
+  screen: {},
   backBtn: { alignSelf: "flex-start", paddingHorizontal: 0, borderWidth: 0, height: 40 },
   card: { padding: spacing.lg },
   title: { ...typography.h2, color: colors.foreground, marginBottom: spacing.md },

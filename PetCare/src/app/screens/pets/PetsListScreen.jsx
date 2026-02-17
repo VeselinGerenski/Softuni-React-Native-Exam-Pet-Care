@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -22,8 +23,9 @@ export default function PetsListScreen({ navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
 
-  const columns = width >= 900 ? 3 : width >= 600 ? 2 : 1;
+  const tabBarHeight = useBottomTabBarHeight();
 
+  const columns = width >= 900 ? 3 : width >= 600 ? 2 : 1;
   const cardWidth = columns === 1 ? "100%" : columns === 2 ? "48%" : "31%";
 
   const data = useMemo(() => pets, [pets]);
@@ -38,13 +40,20 @@ export default function PetsListScreen({ navigation }) {
   return (
     <Screen style={styles.screen}>
       {/* Use ScrollView to avoid nested/inline scrollbars (especially on web) */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: tabBarHeight + spacing.lg },
+        ]}
+        scrollIndicatorInsets={{ bottom: tabBarHeight }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Ionicons name="paw" size={28} color={colors.primaryForeground} />
           </View>
-          <Text style={styles.title}>My Pets</Text>
+          <Text style={styles.title}>Pet Care</Text>
           <Text style={styles.subtitle}>Manage your furry friends</Text>
         </View>
 
@@ -57,11 +66,12 @@ export default function PetsListScreen({ navigation }) {
             left={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
           />
           <AppButton
-            title={isRefreshing ? "Refreshing" : "Refresh"}
+            title="Refresh"
             variant="outline"
             loading={isRefreshing}
             onPress={onRefresh}
-            style={{ minWidth: 130 }}
+            // Keep the button size stable while the spinner shows
+            style={{ width: 130 }}
             left={<Ionicons name="refresh" size={18} color={colors.primary} />}
           />
         </View>
@@ -86,11 +96,7 @@ export default function PetsListScreen({ navigation }) {
               <Pressable
                 key={item.id}
                 onPress={() => navigation.navigate("PetDetails", { petId: item.id })}
-                style={({ pressed }) => [
-                  styles.cardWrap,
-                  { width: cardWidth },
-                  pressed ? { opacity: 0.9 } : null,
-                ]}
+                style={[styles.cardWrap, { width: cardWidth }]}
               >
                 <View style={styles.petCard}>
                   <View style={styles.photoWrap}>
@@ -98,7 +104,9 @@ export default function PetsListScreen({ navigation }) {
                       <Image source={{ uri: item.photoUrl }} style={styles.photo} />
                     ) : (
                       <View style={styles.photoFallback}>
-                        <Text style={styles.photoFallbackText}>{getSpeciesEmoji(item.species)}</Text>
+                        <Text style={styles.photoFallbackText}>
+                          {getSpeciesEmoji(item.species)}
+                        </Text>
                       </View>
                     )}
                     <View style={styles.speciesPill}>
@@ -133,11 +141,9 @@ export default function PetsListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    paddingBottom: 110,
-  },
+  screen: {},
   scrollContent: {
-    paddingBottom: 120,
+    // bottom padding is added dynamically using tabBarHeight
   },
   header: {
     alignItems: "center",

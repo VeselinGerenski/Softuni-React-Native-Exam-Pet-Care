@@ -27,17 +27,6 @@ export const mockPets = [
   },
   {
     id: "3",
-    name: "Charlie",
-    species: "Dog",
-    breed: "Beagle",
-    birthDate: "2021-11-08",
-    neutered: false,
-    notes: "Very energetic, needs lots of exercise.",
-    photoUrl:
-      "https://images.unsplash.com/photo-1505628346881-b72b27e84530?w=800&h=800&fit=crop",
-  },
-  {
-    id: "4",
     name: "Whiskers",
     species: "Cat",
     breed: "Tabby",
@@ -48,7 +37,7 @@ export const mockPets = [
       "https://images.unsplash.com/photo-1574158622682-e40e69881006?w=800&h=800&fit=crop",
   },
   {
-    id: "5",
+    id: "4",
     name: "Buddy",
     species: "Dog",
     breed: "Labrador",
@@ -100,15 +89,6 @@ export const mockAppointments = [
   {
     id: "5",
     petId: "3",
-    type: "Vaccine",
-    dateTime: "2026-04-10T10:30:00",
-    reminderEnabled: true,
-    notes: "Distemper vaccine",
-    isCompleted: false,
-  },
-  {
-    id: "6",
-    petId: "4",
     type: "Vet Visit",
     dateTime: "2026-02-25T15:00:00",
     reminderEnabled: false,

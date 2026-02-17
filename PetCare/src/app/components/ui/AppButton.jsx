@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadow, spacing, typography } from "../../theme/theme";
 
 export default function AppButton({
@@ -27,22 +27,27 @@ export default function AppButton({
       style={({ pressed }) => [
         styles.base,
         { backgroundColor: bg, borderColor },
-        (!isOutline && !isGhost && !disabled) ? shadow.button : null,
+        !isOutline && !isGhost && !disabled ? shadow.button : null,
         pressed && !disabled ? styles.pressed : null,
         disabled ? styles.disabled : null,
         style,
       ]}
     >
-      {({ pressed }) => (
-        <>
+      <>
+        {/* Keep layout stable while loading by only hiding content visually */}
+        <View style={[styles.inline, loading ? styles.hidden : null]} pointerEvents={loading ? "none" : "auto"}>
           {left}
-          {loading ? (
+          <Text style={[styles.text, { color: txt }, textStyle]} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+
+        {loading ? (
+          <View style={styles.spinnerOverlay} pointerEvents="none">
             <ActivityIndicator color={txt} />
-          ) : (
-            <Text style={[styles.text, { color: txt }, textStyle]}>{title}</Text>
-          )}
-        </>
-      )}
+          </View>
+        ) : null}
+      </>
     </Pressable>
   );
 }
@@ -57,6 +62,21 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: spacing.lg,
     borderWidth: 1.5,
+    position: "relative",
+  },
+  inline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  hidden: {
+    opacity: 0,
+  },
+  spinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
   text: {
     ...typography.bodyMedium,
