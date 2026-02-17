@@ -7,13 +7,9 @@ const Stack = createNativeStackNavigator();
 
 export default function ScheduleStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="ScheduleList" component={ScheduleListScreen} options={{ title: "Schedule" }} />
-      <Stack.Screen
-        name="AppointmentForm"
-        component={AppointmentFormScreen}
-        options={{ title: "Add / Edit Appointment" }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ScheduleList" component={ScheduleListScreen} />
+      <Stack.Screen name="AppointmentForm" component={AppointmentFormScreen} />
     </Stack.Navigator>
   );
 }
