@@ -11,6 +11,8 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -36,22 +38,34 @@ export default function PetFormScreen({ route, navigation }) {
 
   const existing = useMemo(() => pets.find((p) => p.id === String(petId)), [pets, petId]);
 
+  // photoUrl is resolved at runtime (from Storage) and comes from the pet doc.
+  // localPhotoUri is used for previewing a freshly picked image before upload.
+  const [localPhotoUri, setLocalPhotoUri] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [name, setName] = useState("");
   const [species, setSpecies] = useState("Dog");
   const [breed, setBreed] = useState("");
-  const [birthDate, setBirthDate] = useState(""); // YYYY-MM-DD
+  const [birthDateObj, setBirthDateObj] = useState(new Date());
+  const [showBirthDatePicker, setShowBirthDatePicker] = useState(false);
   const [neutered, setNeutered] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (existing) {
+      setLocalPhotoUri("");
       setPhotoUrl(existing.photoUrl || "");
       setName(existing.name || "");
       setSpecies(existing.species || "Dog");
       setBreed(existing.breed || "");
-      setBirthDate(existing.birthDate || "");
+      // Parse YYYY-MM-DD safely into a local Date.
+      const bd = (existing.birthDate || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(bd)) {
+        const [y, m, d] = bd.split("-").map((x) => parseInt(x, 10));
+        setBirthDateObj(new Date(y, (m || 1) - 1, d || 1));
+      } else {
+        setBirthDateObj(new Date());
+      }
       setNeutered(!!existing.neutered);
       setNotes(existing.notes || "");
     }
@@ -59,36 +73,78 @@ export default function PetFormScreen({ route, navigation }) {
 
   const validate = () => {
     if (!name.trim() || name.trim().length < 2) return "Please enter a name (min 2 characters).";
-    if (!birthDate.trim()) return "Please enter a birth date (YYYY-MM-DD).";
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate.trim())) return "Birth date must be in YYYY-MM-DD format.";
+    if (!birthDateObj || Number.isNaN(birthDateObj.getTime())) return "Please pick a valid birth date.";
     return null;
   };
+
+  const birthDateString = useMemo(() => {
+    const y = birthDateObj.getFullYear();
+    const m = String(birthDateObj.getMonth() + 1).padStart(2, "0");
+    const d = String(birthDateObj.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, [birthDateObj]);
 
   const onSubmit = async () => {
     const err = validate();
     if (err) return Alert.alert("Check the form", err);
 
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 450));
 
     const payload = {
       name: name.trim(),
       species,
       breed: breed.trim(),
-      birthDate: birthDate.trim(),
+      birthDate: birthDateString,
       neutered,
       notes: notes.trim(),
-      photoUrl: photoUrl.trim(),
     };
 
-    if (isEditMode) {
-      updatePet(String(petId), payload);
+    try {
+      if (isEditMode) {
+        await updatePet(String(petId), payload, localPhotoUri);
+        navigation.navigate("PetDetails", { petId: String(petId) });
+      } else {
+        const newId = await addPet(payload, localPhotoUri);
+        navigation.navigate("PetDetails", { petId: newId });
+      }
+    } catch (e) {
+      Alert.alert(
+        "Could not save",
+        e?.message ||
+          "Something went wrong while saving. If this happened after picking a photo, check Firebase Storage rules."
+      );
+    } finally {
       setSubmitting(false);
-      navigation.navigate("PetDetails", { petId: String(petId) });
-    } else {
-      const newId = addPet(payload);
-      setSubmitting(false);
-      navigation.navigate("PetDetails", { petId: newId });
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      // Ask permission (will no-op / resolve immediately if already granted).
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", "Please allow photo library access to select a pet photo.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        // In expo-image-picker v17, mediaTypes expects 'images' | 'videos' | 'livePhotos'
+        // (string or array). Using strings avoids enum casing issues.
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets?.[0]?.uri;
+        if (uri) setLocalPhotoUri(uri);
+      }
+    } catch (e) {
+      Alert.alert(
+        "Could not open photo library",
+        e?.message || "Image picker failed to open. Please try again."
+      );
     }
   };
 
@@ -118,7 +174,9 @@ export default function PetFormScreen({ route, navigation }) {
               <Text style={styles.sectionLabel}>Pet Photo</Text>
               <View style={styles.photoRow}>
                 <View style={styles.photoPreview}>
-                  {photoUrl ? (
+                  {localPhotoUri ? (
+                    <Image source={{ uri: localPhotoUri }} style={styles.photoImg} />
+                  ) : photoUrl ? (
                     <Image source={{ uri: photoUrl }} style={styles.photoImg} />
                   ) : (
                     <View style={styles.photoFallback}>
@@ -128,22 +186,17 @@ export default function PetFormScreen({ route, navigation }) {
                 </View>
 
                 <View style={{ flex: 1, gap: 8 }}>
-                  <AppField
-                    label="Photo URL"
-                    placeholder="https://..."
-                    value={photoUrl}
-                    onChangeText={setPhotoUrl}
-                    autoCapitalize="none"
-                    keyboardType="url"
-                  />
                   <AppButton
-                    title="Use Sample Photo"
+                    title={localPhotoUri || photoUrl ? "Change Photo" : "Choose Photo"}
                     variant="outline"
-                    onPress={() => setPhotoUrl(`https://picsum.photos/seed/pet-${Date.now()}/800`)}
+                    onPress={pickImage}
                     left={<Ionicons name="image" size={18} color={colors.primary} />}
                     style={{ alignSelf: "flex-start", height: 42 }}
+                    disabled={submitting}
                   />
-                  <Text style={styles.helper}>Tip: replace later with Image Picker</Text>
+                  <Text style={styles.helper}>
+                    Photos are uploaded to Firebase Storage. We only store the Storage path in Firestore.
+                  </Text>
                 </View>
               </View>
             </View>
@@ -161,13 +214,34 @@ export default function PetFormScreen({ route, navigation }) {
 
               <AppField label="Breed" placeholder="e.g., Golden Retriever" value={breed} onChangeText={setBreed} />
 
-              <AppField
-                label="Birth Date *"
-                placeholder="YYYY-MM-DD"
-                value={birthDate}
-                onChangeText={setBirthDate}
-                keyboardType="numbers-and-punctuation"
-              />
+              <View style={styles.dateCard}>
+                <Text style={styles.dateLabel}>Birth Date *</Text>
+                <Text style={styles.dateValue}>{birthDateString}</Text>
+
+                <View style={styles.dateButtons}>
+                  <AppButton
+                    title="Pick Birth Date"
+                    variant="outline"
+                    onPress={() => setShowBirthDatePicker(true)}
+                    left={<Ionicons name="calendar" size={18} color={colors.primary} />}
+                    style={{ flex: 1, height: 44 }}
+                    disabled={submitting}
+                  />
+                </View>
+
+                {showBirthDatePicker ? (
+                  <DateTimePicker
+                    value={birthDateObj}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={(event, selected) => {
+                      setShowBirthDatePicker(false);
+                      if (!selected) return;
+                      setBirthDateObj(selected);
+                    }}
+                  />
+                ) : null}
+              </View>
 
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
@@ -240,6 +314,17 @@ const styles = StyleSheet.create({
   photoImg: { width: "100%", height: "100%", resizeMode: "cover" },
   photoFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   helper: { ...typography.small, color: colors.mutedForeground },
+  dateCard: {
+    padding: spacing.md,
+    backgroundColor: colors.muted,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  dateLabel: { ...typography.smallMedium, color: colors.foreground },
+  dateValue: { ...typography.bodyMedium, color: colors.mutedForeground },
+  dateButtons: { flexDirection: "row", gap: spacing.sm },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",

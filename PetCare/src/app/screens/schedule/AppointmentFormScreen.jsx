@@ -11,6 +11,7 @@ import {
   Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -19,7 +20,7 @@ import AppField from "../../components/ui/AppField";
 import SelectField from "../../components/ui/SelectField";
 import { useData } from "../../providers/DataProvider";
 import { colors, radius, spacing, typography } from "../../theme/theme";
-import { fromInputDateTime, getSpeciesEmoji, toInputDateTime } from "../../utils/format";
+import { formatDate, formatTime, getSpeciesEmoji } from "../../utils/format";
 
 const TYPE_OPTIONS = [
   { label: "Vaccine", value: "Vaccine", left: "💉" },
@@ -41,7 +42,9 @@ export default function AppointmentFormScreen({ route, navigation }) {
 
   const [petId, setPetId] = useState(prefillPetId || "");
   const [type, setType] = useState("Vet Visit");
-  const [dateTime, setDateTime] = useState(""); // YYYY-MM-DDTHH:mm
+  const [dateObj, setDateObj] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [notes, setNotes] = useState("");
@@ -51,7 +54,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
     if (existing) {
       setPetId(existing.petId);
       setType(existing.type);
-      setDateTime(toInputDateTime(existing.dateTime));
+      setDateObj(existing.dateTime ? new Date(existing.dateTime) : new Date());
       setReminderEnabled(!!existing.reminderEnabled);
       setIsCompleted(!!existing.isCompleted);
       setNotes(existing.notes || "");
@@ -68,9 +71,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
 
   const validate = () => {
     if (!petId) return "Please select a pet.";
-    if (!dateTime.trim()) return "Please enter date & time (YYYY-MM-DDTHH:mm).";
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateTime.trim()))
-      return "Date & time must be in YYYY-MM-DDTHH:mm format.";
+    if (!dateObj || Number.isNaN(dateObj.getTime())) return "Please select a valid date & time.";
     return null;
   };
 
@@ -79,21 +80,20 @@ export default function AppointmentFormScreen({ route, navigation }) {
     if (err) return Alert.alert("Check the form", err);
 
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 450));
 
     const payload = {
       petId: String(petId),
       type,
-      dateTime: fromInputDateTime(dateTime.trim()) || new Date(dateTime.trim()).toISOString(),
+      dateTime: dateObj.toISOString(),
       reminderEnabled,
       notes: notes.trim(),
       isCompleted,
     };
 
     if (isEditMode) {
-      updateAppointment(String(appointmentId), payload);
+      await updateAppointment(String(appointmentId), payload);
     } else {
-      addAppointment(payload);
+      await addAppointment(payload);
     }
 
     setSubmitting(false);
@@ -107,11 +107,29 @@ export default function AppointmentFormScreen({ route, navigation }) {
         text: "Delete",
         style: "destructive",
         onPress: () => {
-          deleteAppointment(String(appointmentId));
-          navigation.navigate("ScheduleList");
+          Promise.resolve(deleteAppointment(String(appointmentId)))
+            .then(() => navigation.navigate("ScheduleList"))
+            .catch((e) => Alert.alert("Error", e?.message || "Could not delete appointment"));
         },
       },
     ]);
+  };
+
+  const onPickDate = (event, selected) => {
+    setShowDatePicker(false);
+    if (!selected) return;
+    // Keep the current time, update only date parts
+    const next = new Date(dateObj);
+    next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+    setDateObj(next);
+  };
+
+  const onPickTime = (event, selected) => {
+    setShowTimePicker(false);
+    if (!selected) return;
+    const next = new Date(dateObj);
+    next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+    setDateObj(next);
   };
 
   return (
@@ -163,13 +181,39 @@ export default function AppointmentFormScreen({ route, navigation }) {
 
               <SelectField label="Appointment Type *" value={type} onValueChange={setType} options={TYPE_OPTIONS} />
 
-              <AppField
-                label="Date & Time *"
-                placeholder="YYYY-MM-DDTHH:mm (e.g., 2026-02-20T10:00)"
-                value={dateTime}
-                onChangeText={setDateTime}
-                keyboardType="numbers-and-punctuation"
-              />
+              <View style={styles.dateCard}>
+                <Text style={styles.dateLabel}>Date & Time *</Text>
+                <Text style={styles.dateValue}>
+                  {formatDate(dateObj)} • {formatTime(dateObj)}
+                </Text>
+
+                <View style={styles.dateButtons}>
+                  <AppButton
+                    title="Pick Date"
+                    variant="outline"
+                    onPress={() => setShowDatePicker(true)}
+                    left={<Ionicons name="calendar" size={18} color={colors.primary} />}
+                    style={{ flex: 1, height: 44 }}
+                    disabled={submitting}
+                  />
+                  <AppButton
+                    title="Pick Time"
+                    variant="outline"
+                    onPress={() => setShowTimePicker(true)}
+                    left={<Ionicons name="time" size={18} color={colors.primary} />}
+                    style={{ flex: 1, height: 44 }}
+                    disabled={submitting}
+                  />
+                </View>
+
+                {showDatePicker ? (
+                  <DateTimePicker value={dateObj} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPickDate} />
+                ) : null}
+
+                {showTimePicker ? (
+                  <DateTimePicker value={dateObj} mode="time" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPickTime} />
+                ) : null}
+              </View>
 
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
@@ -239,9 +283,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 />
               </View>
 
-              <Text style={styles.helper}>
-                Tip: if you want a native date picker later, add @react-native-community/datetimepicker.
-              </Text>
+              {/* Native date/time picker enabled */}
             </View>
           </AppCard>
         </ScrollView>
@@ -276,6 +318,18 @@ const styles = StyleSheet.create({
   petPreviewFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   petPreviewName: { ...typography.bodyMedium, color: colors.foreground },
   petPreviewMeta: { ...typography.small, color: colors.mutedForeground, marginTop: 4 },
+
+  dateCard: {
+    padding: spacing.md,
+    backgroundColor: colors.muted,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  dateLabel: { ...typography.smallMedium, color: colors.mutedForeground },
+  dateValue: { ...typography.bodyMedium, color: colors.foreground },
+  dateButtons: { flexDirection: "row", gap: spacing.sm },
 
   switchRow: {
     flexDirection: "row",

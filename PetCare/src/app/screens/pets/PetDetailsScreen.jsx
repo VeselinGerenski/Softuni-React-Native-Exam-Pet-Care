@@ -55,8 +55,10 @@ export default function PetDetailsScreen({ route, navigation }) {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            deletePet(pet.id);
-            navigation.navigate("PetsList");
+            // Firestore/Storage delete
+            Promise.resolve(deletePet(pet.id))
+              .then(() => navigation.navigate("PetsList"))
+              .catch((e) => Alert.alert("Error", e?.message || "Could not delete pet"));
           },
         },
       ]
@@ -175,7 +177,7 @@ export default function PetDetailsScreen({ route, navigation }) {
             />
           </View>
         ) : (
-          <ScrollView contentContainerStyle={{ gap: 10 }}>
+          <View style={{ gap: 10 }}>
             {petAppointments.map((apt) => (
               <Pressable
                 key={apt.id}
@@ -196,7 +198,7 @@ export default function PetDetailsScreen({ route, navigation }) {
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
               </Pressable>
             ))}
-          </ScrollView>
+          </View>
         )}
       </AppCard>
     </Screen>
