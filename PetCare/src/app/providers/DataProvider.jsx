@@ -19,6 +19,13 @@ import {
   uploadImageFromUriAsync,
 } from "../../services/storage";
 
+import {
+  cancelAllAppointmentRemindersAsync,
+  cancelScheduledReminderAsync,
+  scheduleAppointmentReminder24hAsync,
+  syncAppointmentReminders24hAsync,
+} from "../utils/notifications.js";
+
 const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
@@ -26,6 +33,8 @@ export function DataProvider({ children }) {
   const [pets, setPets] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [isBootingData, setIsBootingData] = useState(true);
+
+  const remindersSyncTimeoutRef = useRef(null);
 
   // Cache resolved Storage URLs in-memory so we don't re-fetch on every snapshot.
   const photoUrlCacheRef = useRef(new Map());
@@ -55,6 +64,8 @@ export function DataProvider({ children }) {
     let unsubApts = null;
 
     if (!user) {
+      // Prevent reminders from a previous session/user from firing.
+      cancelAllAppointmentRemindersAsync();
       setPets([]);
       setAppointments([]);
       setIsBootingData(false);
@@ -91,6 +102,27 @@ export function DataProvider({ children }) {
       unsubApts?.();
     };
   }, [user?.uid]);
+
+  // Keep local scheduled reminders in sync with Firestore appointments.
+  useEffect(() => {
+    if (!user) return;
+
+    if (remindersSyncTimeoutRef.current) {
+      clearTimeout(remindersSyncTimeoutRef.current);
+    }
+
+    // Debounce slightly to avoid re-scheduling multiple times during rapid snapshots.
+    remindersSyncTimeoutRef.current = setTimeout(() => {
+      syncAppointmentReminders24hAsync({ appointments, pets });
+    }, 300);
+
+    return () => {
+      if (remindersSyncTimeoutRef.current) {
+        clearTimeout(remindersSyncTimeoutRef.current);
+        remindersSyncTimeoutRef.current = null;
+      }
+    };
+  }, [user?.uid, appointments, pets]);
 
   const refreshData = async () => {
     // With realtime listeners, this is mostly a no-op.
@@ -139,22 +171,56 @@ export function DataProvider({ children }) {
       photoUrlCacheRef.current.delete(pet.photoPath);
     }
 
+    // Cancel any scheduled reminders for appointments associated with this pet
+    const aptsForPet = appointments.filter((a) => a.petId === String(petId));
+    for (const a of aptsForPet) {
+      await cancelScheduledReminderAsync(a.id);
+    }
+
     await removeAppointmentsForPet(user.uid, String(petId));
     await removePet(user.uid, String(petId));
   };
 
   const addAppointment = async (appointment) => {
     if (!user) throw new Error("Not authenticated");
-    return createAppointment(user.uid, appointment);
+    const id = await createAppointment(user.uid, appointment);
+
+    if (appointment?.reminderEnabled) {
+      const petName = pets.find((p) => p.id === String(appointment.petId))?.name || "";
+      await scheduleAppointmentReminder24hAsync({
+        appointmentId: id,
+        petName,
+        type: appointment.type,
+        dateTimeIso: appointment.dateTime,
+      });
+    }
+
+    return id;
   };
 
   const updateAppointment = async (appointmentId, patch) => {
     if (!user) throw new Error("Not authenticated");
     await patchAppointment(user.uid, String(appointmentId), patch);
+
+    const existing = appointments.find((a) => a.id === String(appointmentId));
+    const next = { ...(existing || {}), ...(patch || {}) };
+
+    if (next.reminderEnabled && !next.isCompleted) {
+      const petName = pets.find((p) => p.id === String(next.petId))?.name || "";
+      await scheduleAppointmentReminder24hAsync({
+        appointmentId,
+        petName,
+        type: next.type,
+        dateTimeIso: next.dateTime,
+      });
+    } else {
+      await cancelScheduledReminderAsync(appointmentId);
+    }
   };
 
   const deleteAppointment = async (appointmentId) => {
     if (!user) throw new Error("Not authenticated");
+    await cancelScheduledReminderAsync(appointmentId);
     await removeAppointment(user.uid, String(appointmentId));
   };
 
