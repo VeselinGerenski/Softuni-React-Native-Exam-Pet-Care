@@ -22,8 +22,8 @@ import {
 import {
   cancelAllAppointmentRemindersAsync,
   cancelScheduledReminderAsync,
-  scheduleAppointmentReminder24hAsync,
-  syncAppointmentReminders24hAsync,
+  scheduleAppointmentReminderAsync,
+  syncAppointmentRemindersAsync,
 } from "../utils/notifications.js";
 
 const DataContext = createContext(null);
@@ -113,7 +113,7 @@ export function DataProvider({ children }) {
 
     // Debounce slightly to avoid re-scheduling multiple times during rapid snapshots.
     remindersSyncTimeoutRef.current = setTimeout(() => {
-      syncAppointmentReminders24hAsync({ appointments, pets });
+      syncAppointmentRemindersAsync({ appointments, pets });
     }, 300);
 
     return () => {
@@ -187,11 +187,15 @@ export function DataProvider({ children }) {
 
     if (appointment?.reminderEnabled) {
       const petName = pets.find((p) => p.id === String(appointment.petId))?.name || "";
-      await scheduleAppointmentReminder24hAsync({
+      const leadMinutesRaw = Number(appointment.reminderLeadMinutes);
+      const leadMinutes = Number.isFinite(leadMinutesRaw) && leadMinutesRaw > 0 ? leadMinutesRaw : 24 * 60;
+
+      await scheduleAppointmentReminderAsync({
         appointmentId: id,
         petName,
         type: appointment.type,
         dateTimeIso: appointment.dateTime,
+        leadMinutes,
       });
     }
 
@@ -207,11 +211,15 @@ export function DataProvider({ children }) {
 
     if (next.reminderEnabled && !next.isCompleted) {
       const petName = pets.find((p) => p.id === String(next.petId))?.name || "";
-      await scheduleAppointmentReminder24hAsync({
+      const leadMinutesRaw = Number(next.reminderLeadMinutes);
+      const leadMinutes = Number.isFinite(leadMinutesRaw) && leadMinutesRaw > 0 ? leadMinutesRaw : 24 * 60;
+
+      await scheduleAppointmentReminderAsync({
         appointmentId,
         petName,
         type: next.type,
         dateTimeIso: next.dateTime,
+        leadMinutes,
       });
     } else {
       await cancelScheduledReminderAsync(appointmentId);

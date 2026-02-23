@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,13 +30,21 @@ const TYPE_OPTIONS = [
 ];
 
 export default function ScheduleListScreen({ route, navigation }) {
-  const { pets, appointments } = useData();
+  const { pets, appointments, refreshData } = useData();
   const preFilterPetId = route?.params?.preFilterPetId;
 
   const tabBarHeight = useBottomTabBarHeight();
 
   const [filterPet, setFilterPet] = useState(preFilterPetId || "all");
   const [filterType, setFilterType] = useState("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await new Promise((r) => setTimeout(r, 650));
+    await refreshData();
+    setIsRefreshing(false);
+  };
 
   const petOptions = useMemo(
     () => [{ label: "All Pets", value: "all" }, ...pets.map((p) => ({ label: p.name, value: p.id }))],
@@ -117,6 +126,9 @@ export default function ScheduleListScreen({ route, navigation }) {
           styles.scrollContent,
           { paddingBottom: tabBarHeight + spacing.lg },
         ]}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
         scrollIndicatorInsets={{ bottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
       >

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -45,6 +46,9 @@ export default function PetsListScreen({ navigation }) {
           styles.scrollContent,
           { paddingBottom: tabBarHeight + spacing.lg },
         ]}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
         scrollIndicatorInsets={{ bottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
       >

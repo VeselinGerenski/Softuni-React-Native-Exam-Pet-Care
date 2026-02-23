@@ -23,8 +23,36 @@ export default function RegisterScreen({ navigation }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isValidEmail = (value) => {
+    const v = String(value || "").trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  };
+
   const handleRegister = async () => {
     setError("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Email is required");
+      return;
+    }
+    if (!isValidEmail(cleanEmail)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    // Multi-rule field: required + minimum length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (!confirmPassword) {
+      setError("Please confirm your password");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -32,7 +60,7 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await register(email.trim(), password);
+      await register(cleanEmail, password);
       // RootNavigator will redirect to tabs
     } catch (e) {
       setError(e?.message || "Registration failed");
@@ -95,7 +123,7 @@ export default function RegisterScreen({ navigation }) {
                 title={loading ? "Creating" : "Create Account"}
                 onPress={handleRegister}
                 loading={loading}
-                disabled={!email.trim() || !password || !confirmPassword}
+                disabled={!email.trim() || !password || password.length < 6 || !confirmPassword}
                 left={<Ionicons name="checkmark" size={18} color={colors.primaryForeground} />}
               />
 

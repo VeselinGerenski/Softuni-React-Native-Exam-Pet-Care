@@ -31,6 +31,16 @@ const TYPE_OPTIONS = [
   { label: "Other", value: "Other", left: "📋" },
 ];
 
+const REMINDER_LEAD_OPTIONS = [
+  { label: "30 minutes before", value: 30, left: "⏱️" },
+  { label: "1 hour before", value: 60, left: "⏰" },
+  { label: "2 hours before", value: 120, left: "⏰" },
+  { label: "3 hours before", value: 180, left: "⏰" },
+  { label: "4 hours before", value: 240, left: "⏰" },
+  { label: "5 hours before", value: 300, left: "⏰" },
+  { label: "24 hours before", value: 1440, left: "📅" },
+];
+
 export default function AppointmentFormScreen({ route, navigation }) {
   const { appointmentId, petId: prefillPetId } = route.params || {};
   const isEditMode = !!appointmentId;
@@ -49,6 +59,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [reminderLeadMinutes, setReminderLeadMinutes] = useState(1440);
   const [isCompleted, setIsCompleted] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +70,8 @@ export default function AppointmentFormScreen({ route, navigation }) {
       setType(existing.type);
       setDateObj(existing.dateTime ? new Date(existing.dateTime) : new Date());
       setReminderEnabled(!!existing.reminderEnabled);
+      const leadRaw = Number(existing.reminderLeadMinutes);
+      setReminderLeadMinutes(Number.isFinite(leadRaw) && leadRaw > 0 ? leadRaw : 1440);
       setIsCompleted(!!existing.isCompleted);
       setNotes(existing.notes || "");
     } else if (prefillPetId) {
@@ -89,6 +102,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
       type,
       dateTime: dateObj.toISOString(),
       reminderEnabled,
+      reminderLeadMinutes: reminderEnabled ? Number(reminderLeadMinutes) || 1440 : 0,
       notes: notes.trim(),
       isCompleted,
     };
@@ -256,6 +270,16 @@ export default function AppointmentFormScreen({ route, navigation }) {
                   thumbColor="#fff"
                 />
               </View>
+
+              {reminderEnabled ? (
+                <SelectField
+                  label="Reminder timing"
+                  value={reminderLeadMinutes}
+                  onValueChange={setReminderLeadMinutes}
+                  options={REMINDER_LEAD_OPTIONS}
+                  placeholder="Choose when to be reminded"
+                />
+              ) : null}
 
               {isEditMode ? (
                 <View style={styles.switchRow}>
