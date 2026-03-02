@@ -1,22 +1,41 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, radius, spacing, typography } from "../../theme/theme";
 
-export default function AppField({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize = "none",
-  multiline,
-  numberOfLines,
-  error,
-  left,
-}) {
+/**
+ * A styled TextInput wrapper.
+ *
+ * Keyboard/typing best-practices:
+ * - The component forwards refs so screens can focus the next field.
+ * - Extra TextInput props can be passed through via ...inputProps.
+ */
+const AppField = forwardRef(function AppField(
+  {
+    label,
+    placeholder,
+    value,
+    onChangeText,
+    secureTextEntry,
+    keyboardType,
+    autoCapitalize = "none",
+    multiline,
+    numberOfLines,
+    error,
+    left,
+    style,
+    inputStyle,
+    ...inputProps
+  },
+  ref
+) {
+  // Avoid aggressive autocorrect for most single-line inputs.
+  const autoCorrect =
+    typeof inputProps.autoCorrect === "boolean"
+      ? inputProps.autoCorrect
+      : !!multiline; // allow autocorrect for notes/textareas by default
+
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, style]}>
       {label ? (
         <Text style={styles.labelRow}>
           {left ? left : null}
@@ -25,6 +44,7 @@ export default function AppField({
       ) : null}
 
       <TextInput
+        ref={ref}
         placeholder={placeholder}
         placeholderTextColor="rgba(45,40,35,0.45)"
         value={value}
@@ -32,15 +52,24 @@ export default function AppField({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
         multiline={multiline}
         numberOfLines={numberOfLines}
-        style={[styles.input, multiline ? styles.textarea : null, error ? styles.inputError : null]}
+        style={[
+          styles.input,
+          multiline ? styles.textarea : null,
+          error ? styles.inputError : null,
+          inputStyle,
+        ]}
+        {...inputProps}
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
-}
+});
+
+export default AppField;
 
 const styles = StyleSheet.create({
   wrapper: { gap: 8 },

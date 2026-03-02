@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -45,6 +46,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
   const { appointmentId, petId: prefillPetId } = route.params || {};
   const isEditMode = !!appointmentId;
   const { pets, appointments, addAppointment, updateAppointment, deleteAppointment } = useData();
+  const insets = useSafeAreaInsets();
 
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -167,11 +169,18 @@ export default function AppointmentFormScreen({ route, navigation }) {
         left={<Ionicons name="arrow-back" size={18} color={colors.foreground} />}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           contentContainerStyle={{ paddingBottom: tabBarHeight + spacing.lg }}
           scrollIndicatorInsets={{ bottom: tabBarHeight }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
         >
           <AppCard style={styles.card}>
             <Text style={styles.title}>{isEditMode ? "Edit Appointment" : "New Appointment"}</Text>
@@ -303,6 +312,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 onChangeText={setNotes}
                 multiline
                 numberOfLines={4}
+                autoCapitalize="sentences"
               />
 
               <View style={styles.buttonsRow}>
@@ -330,7 +340,7 @@ export default function AppointmentFormScreen({ route, navigation }) {
                 ) : null}
 
                 <AppButton
-                  title={submitting ? "Saving" : isEditMode ? "Save Changes" : "Create Appointment"}
+                  title={submitting ? "Saving" : isEditMode ? "Save" : "Create"}
                   onPress={onSubmit}
                   loading={submitting}
                   disabled={!petId}

@@ -11,6 +11,9 @@ export default function AppButton({
   style,
   textStyle,
   left,
+  // When true, disables the subtle press scale animation.
+  // Useful for buttons that should not visually "jump" when tapped.
+  disablePressAnimation,
 }) {
   const isOutline = variant === "outline";
   const isGhost = variant === "ghost";
@@ -28,7 +31,7 @@ export default function AppButton({
         styles.base,
         { backgroundColor: bg, borderColor },
         !isOutline && !isGhost && !disabled ? shadow.button : null,
-        pressed && !disabled ? styles.pressed : null,
+        pressed && !disabled && !disablePressAnimation ? styles.pressed : null,
         disabled ? styles.disabled : null,
         style,
       ]}

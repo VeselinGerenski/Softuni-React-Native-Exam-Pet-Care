@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Screen from "../../components/layout/Screen";
 import AppCard from "../../components/ui/AppCard";
@@ -17,6 +19,11 @@ import { colors, spacing, typography } from "../../theme/theme";
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -71,8 +78,18 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <Screen style={styles.screen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.kav}>
-        <View style={styles.centerWrap}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+        style={styles.kav}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
           <AppCard style={styles.card}>
             <View style={styles.header}>
               <View style={styles.logoCircle}>
@@ -96,26 +113,44 @@ export default function RegisterScreen({ navigation }) {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                inputMode="email"
+                autoComplete="email"
+                textContentType="emailAddress"
+                enterKeyHint="next"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus?.()}
                 left={<Ionicons name="mail" size={16} color={colors.primary} style={{ marginRight: 8 }} />}
               />
 
               <AppField
+                ref={passwordRef}
                 label="Password"
                 placeholder="••••••••"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                enterKeyHint="next"
+                returnKeyType="next"
+                onSubmitEditing={() => confirmRef.current?.focus?.()}
                 left={<Ionicons name="lock-closed" size={16} color={colors.primary} style={{ marginRight: 8 }} />}
               />
 
               <AppField
+                ref={confirmRef}
                 label="Confirm Password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                enterKeyHint="done"
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
                 left={<Ionicons name="shield-checkmark" size={16} color={colors.primary} style={{ marginRight: 8 }} />}
               />
 
@@ -135,7 +170,7 @@ export default function RegisterScreen({ navigation }) {
               </View>
             </View>
           </AppCard>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
   );
@@ -144,10 +179,9 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: {
     padding: spacing.md,
-    justifyContent: "center",
   },
-  kav: { flex: 1, justifyContent: "center" },
-  centerWrap: { flex: 1, justifyContent: "center" },
+  kav: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
   card: { padding: spacing.xl, borderWidth: 2, borderColor: colors.border },
   header: { alignItems: "center", marginBottom: spacing.lg },
   logoCircle: {

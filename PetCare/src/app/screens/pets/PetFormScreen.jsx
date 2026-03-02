@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Screen from "../../components/layout/Screen";
 import AppButton from "../../components/ui/AppButton";
@@ -36,6 +37,10 @@ export default function PetFormScreen({ route, navigation }) {
   const { petId } = route.params || {};
   const isEditMode = !!petId;
   const { pets, addPet, updatePet } = useData();
+  const insets = useSafeAreaInsets();
+
+  const breedRef = useRef(null);
+  const notesRef = useRef(null);
 
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -180,12 +185,16 @@ export default function PetFormScreen({ route, navigation }) {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         style={{ flex: 1 }}
       >
         <ScrollView
           contentContainerStyle={{ paddingBottom: tabBarHeight + spacing.lg }}
           scrollIndicatorInsets={{ bottom: tabBarHeight }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
         >
           <AppCard style={styles.card}>
             <Text style={styles.title}>{isEditMode ? "Edit Pet" : "Add New Pet"}</Text>
@@ -229,6 +238,12 @@ export default function PetFormScreen({ route, navigation }) {
                 placeholder="e.g., Max, Luna"
                 value={name}
                 onChangeText={setName}
+                autoCapitalize="words"
+                autoComplete="name"
+                textContentType="name"
+                enterKeyHint="next"
+                returnKeyType="next"
+                onSubmitEditing={() => breedRef.current?.focus?.()}
               />
 
               <SelectField
@@ -239,10 +254,15 @@ export default function PetFormScreen({ route, navigation }) {
               />
 
               <AppField
+                ref={breedRef}
                 label="Breed"
                 placeholder="e.g., Golden Retriever"
                 value={breed}
                 onChangeText={setBreed}
+                autoCapitalize="words"
+                enterKeyHint="next"
+                returnKeyType="next"
+                onSubmitEditing={() => notesRef.current?.focus?.()}
               />
 
               <View style={styles.dateCard}>
@@ -288,12 +308,14 @@ export default function PetFormScreen({ route, navigation }) {
               </View>
 
               <AppField
+                ref={notesRef}
                 label="Notes"
                 placeholder="Allergies, behavior, preferences, etc."
                 value={notes}
                 onChangeText={setNotes}
                 multiline
                 numberOfLines={4}
+                autoCapitalize="sentences"
               />
 
               <View style={styles.buttonsRow}>
@@ -306,7 +328,7 @@ export default function PetFormScreen({ route, navigation }) {
                   disabled={submitting}
                 />
                 <AppButton
-                  title={submitting ? "Saving" : isEditMode ? "Save Changes" : "Add Pet"}
+                  title={submitting ? "Saving" : isEditMode ? "Save" : "Add Pet"}
                   onPress={onSubmit}
                   style={{ flex: 1 }}
                   loading={submitting}

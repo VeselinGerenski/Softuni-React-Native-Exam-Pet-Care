@@ -2,11 +2,14 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  LayoutAnimation,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  UIManager,
+  Platform,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -24,6 +27,17 @@ export default function PetsListScreen({ navigation }) {
   const { pets, refreshData, isBootingData, petsError } = useData();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
+
+  // Smoothly animate between loading -> content changes.
+  React.useEffect(() => {
+    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [isBootingData, petsError, pets?.length]);
 
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -74,11 +88,11 @@ export default function PetsListScreen({ navigation }) {
           <AppButton
             title="Refresh"
             variant="outline"
-            loading={isRefreshing}
             onPress={onRefresh}
-            // Keep the button size stable while the spinner shows
+            disabled={isRefreshing}
+            disablePressAnimation
+            // Keep the button width stable (no internal spinner/icon)
             style={{ width: 130 }}
-            left={<Ionicons name="refresh" size={18} color={colors.primary} />}
           />
         </View>
 
