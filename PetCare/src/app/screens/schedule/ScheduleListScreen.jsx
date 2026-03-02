@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -30,7 +31,14 @@ const TYPE_OPTIONS = [
 ];
 
 export default function ScheduleListScreen({ route, navigation }) {
-  const { pets, appointments, refreshData } = useData();
+  const {
+    pets,
+    appointments,
+    refreshData,
+    isBootingData,
+    petsError,
+    appointmentsError,
+  } = useData();
   const preFilterPetId = route?.params?.preFilterPetId;
 
   const tabBarHeight = useBottomTabBarHeight();
@@ -45,6 +53,9 @@ export default function ScheduleListScreen({ route, navigation }) {
     await refreshData();
     setIsRefreshing(false);
   };
+
+  const hasDataError = !!petsError || !!appointmentsError;
+  const showLoading = isBootingData && appointments.length === 0 && !hasDataError;
 
   const petOptions = useMemo(
     () => [{ label: "All Pets", value: "all" }, ...pets.map((p) => ({ label: p.name, value: p.id }))],
@@ -150,6 +161,32 @@ export default function ScheduleListScreen({ route, navigation }) {
           />
         </View>
 
+        {/* Error state */}
+        {hasDataError ? (
+          <AppCard style={styles.stateCard}>
+            <Ionicons name="warning" size={34} color={colors.mutedForeground} />
+            <Text style={styles.stateTitle}>Couldn’t load schedule</Text>
+            <Text style={styles.stateText}>
+              Please check your connection and try again.
+            </Text>
+            <AppButton
+              title="Try Again"
+              variant="outline"
+              onPress={onRefresh}
+              left={<Ionicons name="refresh" size={18} color={colors.primary} />}
+              style={{ alignSelf: "stretch" }}
+            />
+          </AppCard>
+        ) : null}
+
+        {/* Loading state */}
+        {showLoading ? (
+          <AppCard style={styles.stateCard}>
+            <ActivityIndicator />
+            <Text style={[styles.stateText, { marginTop: 10 }]}>Loading schedule…</Text>
+          </AppCard>
+        ) : null}
+
         {/* Filters */}
         <AppCard style={styles.filtersCard}>
           <View style={styles.filtersHeader}>
@@ -180,18 +217,18 @@ export default function ScheduleListScreen({ route, navigation }) {
             <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
           </View>
 
-          {upcoming.length === 0 ? (
+          {!hasDataError && !showLoading && upcoming.length === 0 ? (
             <AppCard style={styles.sectionEmpty}>
               <Ionicons name="calendar" size={42} color="rgba(122,114,105,0.35)" />
               <Text style={styles.sectionEmptyText}>No upcoming appointments</Text>
             </AppCard>
-          ) : (
+          ) : !hasDataError && !showLoading ? (
             <View style={{ gap: 12 }}>{upcoming.map((a) => renderCard(a, false))}</View>
-          )}
+          ) : null}
         </View>
 
         {/* Past */}
-        {past.length ? (
+        {!hasDataError && !showLoading && past.length ? (
           <View>
             <View style={styles.sectionTitleRow}>
               <View style={[styles.sectionBar, { backgroundColor: colors.mutedForeground }]} />
@@ -230,6 +267,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actions: { marginBottom: spacing.lg },
+  stateCard: {
+    alignItems: "center",
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: 8,
+  },
+  stateTitle: {
+    ...typography.h3,
+    color: colors.foreground,
+    textAlign: "center",
+  },
+  stateText: {
+    ...typography.body,
+    color: colors.mutedForeground,
+    textAlign: "center",
+  },
   filtersCard: { padding: spacing.md, marginBottom: spacing.lg },
   filtersHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.sm },
   filtersTitle: { ...typography.bodyMedium, color: colors.foreground },

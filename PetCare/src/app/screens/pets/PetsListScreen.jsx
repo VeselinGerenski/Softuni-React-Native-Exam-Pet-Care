@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -20,7 +21,7 @@ import { colors, radius, spacing, typography } from "../../theme/theme";
 import { calculateAge, getSpeciesEmoji } from "../../utils/format";
 
 export default function PetsListScreen({ navigation }) {
-  const { pets, refreshData } = useData();
+  const { pets, refreshData, isBootingData, petsError } = useData();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
 
@@ -30,6 +31,7 @@ export default function PetsListScreen({ navigation }) {
   const cardWidth = columns === 1 ? "100%" : columns === 2 ? "48%" : "31%";
 
   const data = useMemo(() => pets, [pets]);
+  const showLoading = isBootingData && data.length === 0 && !petsError;
 
   const onRefresh = async () => {
     setIsRefreshing(true);
@@ -80,7 +82,33 @@ export default function PetsListScreen({ navigation }) {
           />
         </View>
 
-        {data.length === 0 ? (
+        {/* Error state */}
+        {petsError ? (
+          <AppCard style={styles.stateCard}>
+            <Ionicons name="warning" size={34} color={colors.mutedForeground} />
+            <Text style={styles.stateTitle}>Couldn’t load pets</Text>
+            <Text style={styles.stateText}>
+              Please check your connection and try again.
+            </Text>
+            <AppButton
+              title="Try Again"
+              variant="outline"
+              onPress={onRefresh}
+              left={<Ionicons name="refresh" size={18} color={colors.primary} />}
+              style={{ alignSelf: "stretch" }}
+            />
+          </AppCard>
+        ) : null}
+
+        {/* Loading state */}
+        {showLoading ? (
+          <AppCard style={styles.stateCard}>
+            <ActivityIndicator />
+            <Text style={[styles.stateText, { marginTop: 10 }]}>Loading your pets…</Text>
+          </AppCard>
+        ) : null}
+
+        {!petsError && !showLoading && data.length === 0 ? (
           <AppCard style={styles.emptyCard}>
             <Text style={styles.emptyEmoji}>🐾</Text>
             <Text style={styles.emptyTitle}>No Pets Yet</Text>
@@ -175,6 +203,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  stateCard: {
+    alignItems: "center",
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: 8,
+  },
+  stateTitle: {
+    ...typography.h3,
+    color: colors.foreground,
+    textAlign: "center",
+  },
+  stateText: {
+    ...typography.body,
+    color: colors.mutedForeground,
+    textAlign: "center",
   },
   grid: {
     flexDirection: "row",

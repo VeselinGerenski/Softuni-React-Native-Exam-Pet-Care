@@ -17,12 +17,25 @@ import { db } from "../firebase";
 
 export const petsCol = (uid) => collection(db, "users", uid, "pets");
 
-export function listenPets(uid, callback) {
+/**
+ * Listen to pets in real time.
+ *
+ * @param {string} uid
+ * @param {(pets: any[]) => void} onNext
+ * @param {(error: any) => void} [onError]
+ */
+export function listenPets(uid, onNext, onError) {
   const q = query(petsCol(uid), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snap) => {
-    const pets = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(pets);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      const pets = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      onNext(pets);
+    },
+    (err) => {
+      if (typeof onError === "function") onError(err);
+    }
+  );
 }
 
 export async function createPet(uid, data, idOverride) {

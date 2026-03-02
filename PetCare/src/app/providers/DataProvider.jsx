@@ -33,6 +33,8 @@ export function DataProvider({ children }) {
   const [pets, setPets] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [isBootingData, setIsBootingData] = useState(true);
+  const [petsError, setPetsError] = useState(null);
+  const [appointmentsError, setAppointmentsError] = useState(null);
 
   const remindersSyncTimeoutRef = useRef(null);
 
@@ -63,39 +65,69 @@ export function DataProvider({ children }) {
     let unsubPets = null;
     let unsubApts = null;
 
+    // Track whether we've received the first snapshot from each listener.
+    let petsLoaded = false;
+    let aptsLoaded = false;
+
+    const finishBootIfReady = () => {
+      if (petsLoaded && aptsLoaded) setIsBootingData(false);
+    };
+
     if (!user) {
       // Prevent reminders from a previous session/user from firing.
       cancelAllAppointmentRemindersAsync();
       setPets([]);
       setAppointments([]);
+      setPetsError(null);
+      setAppointmentsError(null);
       setIsBootingData(false);
       return undefined;
     }
 
     setIsBootingData(true);
+    setPetsError(null);
+    setAppointmentsError(null);
 
-    unsubPets = listenPets(user.uid, (petDocs) => {
-      // Hide the legacy seeded pet document (id: "charlie") so it never appears in the UI.
-      const visiblePetDocs = petDocs.filter((p) => p.id !== "charlie");
+    unsubPets = listenPets(
+      user.uid,
+      (petDocs) => {
+        // Hide the legacy seeded pet document (id: "charlie") so it never appears in the UI.
+        const visiblePetDocs = petDocs.filter((p) => p.id !== "charlie");
 
-      // Merge cached photoUrl if we already have it
-      setPets(
-        visiblePetDocs.map((p) => {
-          const cached = p.photoPath ? photoUrlCacheRef.current.get(p.photoPath) : "";
-          return {
-            ...p,
-            photoUrl: cached || p.photoUrl || "",
-          };
-        })
-      );
-      resolvePetPhotoUrls(visiblePetDocs);
-    });
+        // Merge cached photoUrl if we already have it
+        setPets(
+          visiblePetDocs.map((p) => {
+            const cached = p.photoPath ? photoUrlCacheRef.current.get(p.photoPath) : "";
+            return {
+              ...p,
+              photoUrl: cached || p.photoUrl || "",
+            };
+          })
+        );
+        resolvePetPhotoUrls(visiblePetDocs);
+        petsLoaded = true;
+        finishBootIfReady();
+      },
+      (err) => {
+        setPetsError(err);
+        petsLoaded = true;
+        finishBootIfReady();
+      }
+    );
 
-    unsubApts = listenAppointments(user.uid, (aptDocs) => {
-      setAppointments(aptDocs);
-    });
-
-    setIsBootingData(false);
+    unsubApts = listenAppointments(
+      user.uid,
+      (aptDocs) => {
+        setAppointments(aptDocs);
+        aptsLoaded = true;
+        finishBootIfReady();
+      },
+      (err) => {
+        setAppointmentsError(err);
+        aptsLoaded = true;
+        finishBootIfReady();
+      }
+    );
 
     return () => {
       unsubPets?.();
@@ -237,6 +269,8 @@ export function DataProvider({ children }) {
       pets,
       appointments,
       isBootingData,
+      petsError,
+      appointmentsError,
       refreshData,
       addPet,
       updatePet,
@@ -245,7 +279,7 @@ export function DataProvider({ children }) {
       updateAppointment,
       deleteAppointment,
     }),
-    [pets, appointments, isBootingData, user]
+    [pets, appointments, isBootingData, petsError, appointmentsError, user]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

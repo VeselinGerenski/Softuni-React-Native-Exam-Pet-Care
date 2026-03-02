@@ -14,13 +14,26 @@ import { db } from "../firebase";
 
 export const appointmentsCol = (uid) => collection(db, "users", uid, "appointments");
 
-export function listenAppointments(uid, callback) {
+/**
+ * Listen to appointments in real time.
+ *
+ * @param {string} uid
+ * @param {(appointments: any[]) => void} onNext
+ * @param {(error: any) => void} [onError]
+ */
+export function listenAppointments(uid, onNext, onError) {
   // Store dateTime as ISO string; lexicographic order matches chronological order.
   const q = query(appointmentsCol(uid), orderBy("dateTime", "asc"));
-  return onSnapshot(q, (snap) => {
-    const appointments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(appointments);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      const appointments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      onNext(appointments);
+    },
+    (err) => {
+      if (typeof onError === "function") onError(err);
+    }
+  );
 }
 
 export async function createAppointment(uid, data, idOverride) {
