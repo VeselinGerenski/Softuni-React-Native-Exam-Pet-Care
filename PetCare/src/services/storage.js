@@ -1,10 +1,7 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { storage } from "./firebase";
 
-/**
- * Upload an image from an Expo local URI to Firebase Storage.
- * We store ONLY the storage path in Firestore (no URLs), and resolve URLs at runtime.
- */
+
 export async function uploadImageFromUriAsync(localUri, storagePath, contentType = "image/jpeg") {
   if (!localUri) throw new Error("Missing localUri");
   if (!storagePath) throw new Error("Missing storagePath");
@@ -27,6 +24,6 @@ export async function deleteStorageObjectIfExists(storagePath) {
   try {
     await deleteObject(ref(storage, storagePath));
   } catch (e) {
-    // Ignore "object-not-found" and similar errors
+
   }
 }
