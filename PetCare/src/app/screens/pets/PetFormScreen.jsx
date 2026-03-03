@@ -184,12 +184,14 @@ export default function PetFormScreen({ route, navigation }) {
       />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.select({ ios: "padding", android: "height" })}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: tabBarHeight + spacing.lg }}
+          contentContainerStyle={{
+            paddingBottom: tabBarHeight + spacing.lg + insets.bottom + 120,
+          }}
           scrollIndicatorInsets={{ bottom: tabBarHeight }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

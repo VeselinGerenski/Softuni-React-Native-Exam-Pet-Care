@@ -69,12 +69,12 @@ export default function LoginScreen({ navigation }) {
   return (
     <Screen style={styles.screen}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.select({ ios: "padding", android: "height" })}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         style={styles.kav}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
