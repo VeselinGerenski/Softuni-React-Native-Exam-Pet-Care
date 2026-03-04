@@ -5,7 +5,7 @@ A simple mobile app to help you manage pet profiles and keep track of appointmen
 ## APK
 
  APK Download
- `https://expo.dev/artifacts/eas/wEnFeiNwVEySpH6AfRS8tv.apk`
+ `https://expo.dev/artifacts/eas/TGXzLk8vkQAYncLCfpGzH.apk`
 
 ---
 
