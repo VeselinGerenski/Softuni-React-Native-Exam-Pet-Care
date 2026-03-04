@@ -14,6 +14,7 @@ import AppCard from "../../components/ui/AppCard";
 import AppButton from "../../components/ui/AppButton";
 import AppField from "../../components/ui/AppField";
 import { useAuth } from "../../providers/AuthProvider";
+import { getAuthErrorMessage } from "../../utils/authErrorMessages";
 import { colors, spacing, typography } from "../../theme/theme";
 
 export default function LoginScreen({ navigation }) {
@@ -60,7 +61,7 @@ export default function LoginScreen({ navigation }) {
       await login(cleanEmail, password);
       // RootNavigator will switch to AppTabs when authenticated
     } catch (e) {
-      setError(e?.message || "Login failed");
+      setError(getAuthErrorMessage(e, "login"));
     } finally {
       setLoading(false);
     }

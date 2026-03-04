@@ -15,6 +15,7 @@ import AppCard from "../../components/ui/AppCard";
 import AppButton from "../../components/ui/AppButton";
 import AppField from "../../components/ui/AppField";
 import { useAuth } from "../../providers/AuthProvider";
+import { getAuthErrorMessage } from "../../utils/authErrorMessages";
 import { colors, spacing, typography } from "../../theme/theme";
 
 export default function RegisterScreen({ navigation }) {
@@ -70,7 +71,7 @@ export default function RegisterScreen({ navigation }) {
       await register(cleanEmail, password);
       // RootNavigator will redirect to tabs
     } catch (e) {
-      setError(e?.message || "Registration failed");
+      setError(getAuthErrorMessage(e, "register"));
     } finally {
       setLoading(false);
     }
