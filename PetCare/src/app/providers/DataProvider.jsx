@@ -172,7 +172,7 @@ export function DataProvider({ children }) {
 
     if (localPhotoUri) {
       const ext = (localPhotoUri.split(".").pop() || "jpg").split("?")[0];
-      const path = `users/${user.uid}/pets/${newId}.${ext}`;
+      const path = `users/${user.uid}/pets/${newId}_${Date.now()}.${ext}`;
       await uploadImageFromUriAsync(localPhotoUri, path);
       await patchPet(user.uid, newId, { photoPath: path });
     }
@@ -183,15 +183,47 @@ export function DataProvider({ children }) {
   const updatePet = async (petId, patch, localPhotoUri) => {
     if (!user) throw new Error("Not authenticated");
 
+    const id = String(petId);
+
+    // If a new photo was picked, write it to a NEW Storage path (versioned),
+    // so the download URL changes and React Native doesn't keep showing the cached image.
     if (localPhotoUri) {
+      const existingPet = pets.find((p) => p.id === id);
+      const previousPath = existingPet?.photoPath || "";
+
       const ext = (localPhotoUri.split(".").pop() || "jpg").split("?")[0];
-      const path = `users/${user.uid}/pets/${petId}.${ext}`;
+      const path = `users/${user.uid}/pets/${id}_${Date.now()}.${ext}`;
+
       await uploadImageFromUriAsync(localPhotoUri, path);
-      await patchPet(user.uid, petId, { ...patch, photoPath: path });
+      await patchPet(user.uid, id, { ...patch, photoPath: path });
+
+      // Clean up the previous photo and cached URL to prevent leaks and stale images.
+      if (previousPath && previousPath !== path) {
+        await deleteStorageObjectIfExists(previousPath);
+        photoUrlCacheRef.current.delete(previousPath);
+      }
+
+      // Optimistically resolve the new download URL so the UI updates immediately
+      // when navigating back (don't wait for the Firestore snapshot).
+      try {
+        const url = await getDownloadUrlForPath(path);
+        photoUrlCacheRef.current.set(path, url);
+        setPets((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, ...patch, photoPath: path, photoUrl: url } : p))
+        );
+      } catch {
+        // If the URL resolve fails, fall back to snapshot-based resolution.
+        photoUrlCacheRef.current.delete(path);
+        setPets((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch, photoPath: path } : p)));
+      }
+
       return;
     }
 
-    await patchPet(user.uid, petId, patch);
+    await patchPet(user.uid, id, patch);
+
+    // Optimistic local patch for snappier UI when navigating back.
+    setPets((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   };
 
   const deletePet = async (petId) => {
